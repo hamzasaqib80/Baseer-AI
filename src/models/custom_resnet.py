@@ -3,22 +3,35 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import List, Type, Union
 
+
 class ResidualBlock(nn.Module):
     """
     Standard Residual Block with Batch Normalization and Identity Mapping.
     """
+
     def __init__(self, in_channels: int, out_channels: int, stride: int = 1):
         super(ResidualBlock, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(
+            in_channels,
+            out_channels,
+            kernel_size=3,
+            stride=stride,
+            padding=1,
+            bias=False,
+        )
         self.bn1 = nn.BatchNorm2d(out_channels)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(
+            out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False
+        )
         self.bn2 = nn.BatchNorm2d(out_channels)
 
         self.shortcut = nn.Sequential()
         if stride != 1 or in_channels != out_channels:
             self.shortcut = nn.Sequential(
-                nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(out_channels)
+                nn.Conv2d(
+                    in_channels, out_channels, kernel_size=1, stride=stride, bias=False
+                ),
+                nn.BatchNorm2d(out_channels),
             )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -28,31 +41,35 @@ class ResidualBlock(nn.Module):
         out = F.relu(out)
         return out
 
+
 class CustomResNet(nn.Module):
     """
     Enterprise-grade ResNet model optimized for CIFAR-10.
     Targets 92%+ accuracy with specialized dropout and channel scaling.
     """
+
     def __init__(self, num_classes: int = 10, dropout_rate: float = 0.2):
         super(CustomResNet, self).__init__()
         self.in_channels = 64
-        
+
         # Initial Layer: 3x32x32 -> 64x32x32
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
-        
+
         # ResNet Blocks
         self.layer1 = self._make_layer(64, 2, stride=1)
         self.layer2 = self._make_layer(128, 2, stride=2)
         self.layer3 = self._make_layer(256, 2, stride=2)
         self.layer4 = self._make_layer(512, 2, stride=2)
-        
+
         # Classification Head
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
         self.dropout = nn.Dropout(dropout_rate)
         self.fc = nn.Linear(512, num_classes)
 
-    def _make_layer(self, out_channels: int, num_blocks: int, stride: int) -> nn.Sequential:
+    def _make_layer(
+        self, out_channels: int, num_blocks: int, stride: int
+    ) -> nn.Sequential:
         strides = [stride] + [1] * (num_blocks - 1)
         layers = []
         for s in strides:
@@ -70,6 +87,7 @@ class CustomResNet(nn.Module):
         out = out.view(out.size(0), -1)
         out = self.dropout(out)
         return self.fc(out)
+
 
 def get_model(num_classes: int = 10) -> CustomResNet:
     """Model factory for production deployment."""

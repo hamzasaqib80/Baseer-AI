@@ -67,7 +67,7 @@ We maintain high engineering standards through automated checks:
 ## 🌍 Public Deployment
 The system is currently hosted live on **Hugging Face Spaces**. 
 > [!TIP]
-> [Replace this text with your live URL once it's finished building!]
+> **View Live Demo:** [Baseer AI on Hugging Face Spaces](https://huggingface.co/spaces/ladla20/VantageCV-Core)
 
 ---
 **Author**: Muhammad Hamza Saqib  

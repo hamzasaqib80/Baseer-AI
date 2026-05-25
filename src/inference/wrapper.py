@@ -6,35 +6,50 @@ from src.config_handler import load_config
 from src.models.custom_resnet import get_model
 from src.utils.security_validator import SecurityValidator
 
+
 class InferenceEngine:
     """
     Production-ready asynchronous inference engine.
     Stateless, secure, and optimized for million-user request streams.
     """
+
     def __init__(self, config_path: str = "configs/config.yaml"):
         self.config = load_config(config_path)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        
+
         # Load Model in Inference Mode
-        self.model = get_model(num_classes=self.config.dataset.num_classes).to(self.device)
+        self.model = get_model(num_classes=self.config.dataset.num_classes).to(
+            self.device
+        )
         self._load_best_checkpoint()
         self.model.eval()
-        
-        self.classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+
+        self.classes = (
+            "plane",
+            "car",
+            "bird",
+            "cat",
+            "deer",
+            "dog",
+            "frog",
+            "horse",
+            "ship",
+            "truck",
+        )
 
     def _load_best_checkpoint(self):
         # Graceful fallback for initialized models
         path = self.config.infrastructure.model_save_path
         if torch.cuda.is_available() is False:
-             # Load to CPU if local
-             loc = 'cpu'
+            # Load to CPU if local
+            loc = "cpu"
         else:
-             loc = 'cuda'
+            loc = "cuda"
 
         try:
             # Fixed for PyTorch 2.6+ security settings
             checkpoint = torch.load(path, map_location=loc, weights_only=False)
-            self.model.load_state_dict(checkpoint['model'])
+            self.model.load_state_dict(checkpoint["model"])
             print(f"[INFO] Weight initialization complete. Path: {path}")
         except FileNotFoundError:
             print("[WARN] Checkpoint not found. Initializing with random weights.")
@@ -47,6 +62,7 @@ class InferenceEngine:
         """
         # 1. Resize to 32x32 (CIFAR-10 input size)
         from PIL import Image as PILImage
+
         img = PILImage.fromarray(raw_data).resize((32, 32), PILImage.BILINEAR)
 
         # 2. Convert to float tensor in [0, 1] range: (H, W, C) -> (C, H, W)
@@ -55,7 +71,7 @@ class InferenceEngine:
 
         # 3. Apply CIFAR-10 normalization (same as training transforms)
         mean = torch.tensor(self.config.dataset.mean, dtype=torch.float32).view(3, 1, 1)
-        std  = torch.tensor(self.config.dataset.std,  dtype=torch.float32).view(3, 1, 1)
+        std = torch.tensor(self.config.dataset.std, dtype=torch.float32).view(3, 1, 1)
         tensor = (tensor - mean) / std
 
         # 4. Add batch dimension and move to device
@@ -63,7 +79,7 @@ class InferenceEngine:
 
         # 5. Forward Pass
         logits = self.model(tensor)
-        probs  = F.softmax(logits, dim=1)
+        probs = F.softmax(logits, dim=1)
 
         # 6. Decode result
         conf, pred = torch.max(probs, 1)
@@ -71,8 +87,9 @@ class InferenceEngine:
             "prediction": self.classes[pred.item()],
             "confidence": float(conf.item()),
             "class_index": int(pred.item()),
-            "status": "v1.0"
+            "status": "v1.0",
         }
+
 
 if __name__ == "__main__":
     # Integration Example
