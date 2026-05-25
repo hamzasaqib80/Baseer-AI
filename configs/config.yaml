@@ -1,0 +1,47 @@
+# CIFAR-10 Enterprise Pipeline Configuration
+# All parameters are immutable during execution for reproducibility and security.
+
+project:
+  name: "CIFAR10-Enterprise-Classifier"
+  version: "1.0.0"
+  author: "Principal AI Architect"
+
+infrastructure:
+  seed: 42
+  num_workers: 4
+  pin_memory: true
+  device: "auto" # Will prioritize CUDA -> MPS -> CPU
+  workspace_path: "./"
+  model_save_path: "models/best_model.pth"
+
+dataset:
+  name: "CIFAR10"
+  input_shape: [3, 32, 32]
+  num_classes: 10
+  mean: [0.4914, 0.4822, 0.4465]
+  std: [0.2023, 0.1994, 0.2010]
+  augmentation:
+    crop_padding: 4
+    horizontal_flip_prob: 0.5
+    rotation_degrees: 15
+
+security:
+  image_bounds:
+    min: 0.0
+    max: 1.0
+  tensor_bounds:
+    min_val: -5.0
+    max_val: 5.0 # Check normalized space
+  allowed_dtypes: ["torch.float32", "torch.float16"]
+  strict_shape_enforcement: true
+
+hyperparameters:
+  batch_size: 128
+  epochs: 100
+  learning_rate: 1e-3
+  weight_decay: 5e-4
+  optimizer: "AdamW"
+  scheduler: "OneCycleLR"
+  early_stopping:
+    patience: 10
+    min_delta: 0.001
