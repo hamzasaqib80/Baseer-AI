@@ -1,5 +1,5 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from contextlib import asynccontextmanager
 import io
 from PIL import Image
@@ -7,7 +7,7 @@ import numpy as np
 import time
 from src.inference.wrapper import InferenceEngine
 
-# Global variable for the engine to be loaded on startup
+# Global variable for the engine
 inference_engine = None
 
 
@@ -37,26 +37,22 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-from fastapi.responses import JSONResponse, RedirectResponse
-
 
 @app.get("/", include_in_schema=False)
 async def root():
-    """Redirect root to interactive documentation."""
     return RedirectResponse(url="/docs")
 
 
 @app.get("/health")
 async def health_check():
-    """Service status endpoint."""
     return {"status": "healthy", "model_loaded": inference_engine is not None}
 
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     """
-    Asynchronous prediction endpoint.
-    Accepts image file, sanitizes, and returns predictions.
+    Lean prediction endpoint. Delegates preprocessing and inference
+    to the specialized InferenceEngine.
     """
     if inference_engine is None:
         raise HTTPException(status_code=503, detail="Model engine not initialized.")
@@ -65,28 +61,14 @@ async def predict(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="File must be an image.")
 
     try:
-        # 1. Read image bytes
+        # 1. Read raw image
         contents = await file.read()
         image = Image.open(io.BytesIO(contents)).convert("RGB")
+        raw_img = np.array(image)
 
-        # 2. Resize to CIFAR-10 dimensions (32x32)
-        image = image.resize((32, 32))
-
-        # 3. Convert to float tensor in range [0, 1] — shape (H, W, C)
-        img_array = np.array(image).astype(np.float32) / 255.0
-
-        # 4. Transpose to (C, H, W) — required by PyTorch models
-        img_array = img_array.transpose(2, 0, 1)
-
-        # 5. CRITICAL: Apply CIFAR-10 normalization (must match training pipeline)
-        # These are the exact constants used during training in dataloader.py
-        mean = np.array([0.4914, 0.4822, 0.4465], dtype=np.float32).reshape(3, 1, 1)
-        std = np.array([0.2023, 0.1994, 0.2010], dtype=np.float32).reshape(3, 1, 1)
-        img_array = (img_array - mean) / std
-
-        # 6. Run Secure Inference
+        # 2. Run Engine Inference
         start_time = time.time()
-        result = inference_engine.predict(img_array)
+        result = inference_engine.predict(raw_img)
         latency = (time.time() - start_time) * 1000  # ms
 
         return {

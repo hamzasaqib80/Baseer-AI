@@ -65,10 +65,11 @@ We maintain high engineering standards through automated checks:
 - **Functional Testing**: `pytest` suite ensuring API and Validator integrity.
 
 ## 🌍 Public Deployment
-The system is currently hosted live on **Hugging Face Spaces**. 
+Baseer AI is engineered to be cloud-agnostic and is currently production-ready.
+
 > [!TIP]
-> **View Live Demo:** [Baseer AI on Hugging Face Spaces](https://huggingface.co/spaces/ladla20/VantageCV-Core)
+> **View Live Production App:** [Baseer AI Dashboard](https://baseer-ai.streamlit.app/)
 
 ---
 **Author**: Muhammad Hamza Saqib  
-**Version**: 1.0 | **Project Type**: Enterprise AI Infrastructure
+**GitHub**: [hamzasaqib80](https://github.com/hamzasaqib80)

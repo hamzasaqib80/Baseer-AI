@@ -1,3 +1,8 @@
+import os
+
+# Silence noisy internal Streamlit/PyTorch file watcher warnings
+os.environ["STREAMLIT_SERVER_FILE_WATCHER_TYPE"] = "none"
+
 import streamlit as st
 import numpy as np
 from PIL import Image
