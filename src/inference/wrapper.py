@@ -45,9 +45,15 @@ class InferenceEngine:
         Predicts class from raw image array with integrated security validation.
         Designed for high-concurrency IO.
         """
-        # 1. Security & Sanitization Layer
+        # 1. Pre-processing (Resize to 32x32 for CIFAR model)
+        from PIL import Image as PILImage
+        img = PILImage.fromarray(raw_data)
+        img_resized = img.resize(tuple(self.config.dataset.input_shape[-2:]))
+        processed_data = np.array(img_resized)
+
+        # 2. Security & Sanitization Layer
         sanitized_tensor = SecurityValidator.sanitize_input(
-            raw_data, 
+            processed_data, 
             expected_shape=tuple(self.config.dataset.input_shape)
         ).unsqueeze(0).to(self.device)
         
