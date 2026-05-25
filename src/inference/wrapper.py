@@ -42,28 +42,31 @@ class InferenceEngine:
     @torch.inference_mode()
     def predict(self, raw_data: np.ndarray) -> dict:
         """
-        Predicts class from raw image array with integrated security validation.
-        Designed for high-concurrency IO.
+        Predicts class from raw image array.
+        Applies the exact same preprocessing pipeline used during training.
         """
-        # 1. Pre-processing (Resize to 32x32 for CIFAR model)
+        # 1. Resize to 32x32 (CIFAR-10 input size)
         from PIL import Image as PILImage
-        img = PILImage.fromarray(raw_data)
-        img_resized = img.resize(tuple(self.config.dataset.input_shape[-2:]))
-        processed_data = np.array(img_resized)
+        img = PILImage.fromarray(raw_data).resize((32, 32), PILImage.BILINEAR)
 
-        # 2. Security & Sanitization Layer
-        sanitized_tensor = SecurityValidator.sanitize_input(
-            processed_data, 
-            expected_shape=tuple(self.config.dataset.input_shape)
-        ).unsqueeze(0).to(self.device)
-        
-        # 2. Forward Pass
-        logits = self.model(sanitized_tensor)
-        probs = F.softmax(logits, dim=1)
-        
-        # 3. Formatted Response
+        # 2. Convert to float tensor in [0, 1] range: (H, W, C) -> (C, H, W)
+        img_array = np.array(img, dtype=np.float32) / 255.0
+        tensor = torch.from_numpy(img_array).permute(2, 0, 1)  # (3, 32, 32)
+
+        # 3. Apply CIFAR-10 normalization (same as training transforms)
+        mean = torch.tensor(self.config.dataset.mean, dtype=torch.float32).view(3, 1, 1)
+        std  = torch.tensor(self.config.dataset.std,  dtype=torch.float32).view(3, 1, 1)
+        tensor = (tensor - mean) / std
+
+        # 4. Add batch dimension and move to device
+        tensor = tensor.unsqueeze(0).to(self.device)
+
+        # 5. Forward Pass
+        logits = self.model(tensor)
+        probs  = F.softmax(logits, dim=1)
+
+        # 6. Decode result
         conf, pred = torch.max(probs, 1)
-        
         return {
             "prediction": self.classes[pred.item()],
             "confidence": float(conf.item()),
