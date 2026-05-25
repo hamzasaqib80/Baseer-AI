@@ -1,10 +1,16 @@
 import streamlit as st
-import requests
 from PIL import Image
 import io
 import pandas as pd
 import streamlit.components.v1 as components
 import altair as alt
+import numpy as np
+
+# Import the "AI Brain" directly for Cloud Compatibility
+try:
+    from src.inference.wrapper import InferenceEngine
+except ImportError:
+    st.error("Inference module not found. Check repository structure.")
 
 # Helper function for smooth scrolling
 def scroll_to(element_id):
@@ -20,6 +26,17 @@ def scroll_to(element_id):
         height=0,
     )
 
+# --- Initialize the Engine (One-time Load) ---
+@st.cache_resource
+def load_engine():
+    return InferenceEngine()
+
+try:
+    engine = load_engine()
+except Exception as e:
+    st.error(f"Failed to initialize AI Engine: {e}")
+    engine = None
+
 st.set_page_config(page_title="Baseer AI", page_icon="👁️", layout="centered")
 
 # Visual Styling
@@ -34,26 +51,15 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- Sidebar: Operational Scope ---
+# --- Sidebar ---
 with st.sidebar:
     st.title("👁️ Baseer AI")
     st.markdown("---")
     st.markdown("### 📋 Usage Guidelines")
-    st.markdown("""
-    <div class='instruction-text'>
-    1. Upload a clear, centered photo.<br>
-    2. Ensure the object belongs to the supported classes.<br>
-    3. Click 'Analyze' to begin the spectral pass.
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<div class='instruction-text'>1. Upload a clear, centered photo.<br>2. Click 'Analyze' to begin.</div>", unsafe_allow_html=True)
     
     st.markdown("### 🎯 Supported Classes")
-    st.markdown("""
-    <div class='instruction-text'>
-    <b>Transport:</b> Plane, Car, Ship, Truck<br>
-    <b>Animals:</b> Bird, Cat, Deer, Dog, Frog, Horse
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<div class='instruction-text'><b>Transport:</b> Plane, Car, Ship, Truck<br><b>Animals:</b> Bird, Cat, Deer, Dog, Frog, Horse</div>", unsafe_allow_html=True)
     
     st.write("---")
     st.info("System: Online (v1.0)\n\nDeveloped by Muhammad Hamza Saqib")
@@ -63,7 +69,6 @@ st.title("Baseer AI")
 st.caption("Discerning Eye (بصیر) — Specialized Object Recognition")
 st.write("---")
 
-# --- Step 1: Upload ---
 uploaded_file = st.file_uploader("Drop an image below for analysis", type=["jpg", "png", "jpeg"])
 
 if uploaded_file:
@@ -74,19 +79,19 @@ if uploaded_file:
     scroll_to("analyze_anchor")
     
     if st.button("RUN SPECTRAL ANALYSIS"):
-        with st.spinner("Processing tensors..."):
-            API_URL = "http://localhost:8000/predict"
-            try:
-                img_byte_arr = io.BytesIO()
-                image.save(img_byte_arr, format=image.format)
-                img_byte_arr = img_byte_arr.getvalue()
-                files = {"file": (uploaded_file.name, img_byte_arr, uploaded_file.type)}
-                
-                response = requests.post(API_URL, files=files, timeout=5)
-                if response.status_code == 200:
-                    st.session_state['result'] = response.json()
-            except:
-                st.error("Backend Error: Ensure 'uvicorn' is active.")
+        if engine is None:
+            st.error("AI Engine is not initialized. Please check logs.")
+        else:
+            with st.spinner("Processing tensors via Direct Link..."):
+                try:
+                    # Convert Image to Numpy for the engine
+                    img_array = np.array(image.convert("RGB"))
+                    
+                    # Run Inference Directly (No URL needed!)
+                    res = engine.predict(img_array)
+                    st.session_state['result'] = res
+                except Exception as e:
+                    st.error(f"Inference Error: {e}")
 
 # --- Step 2: Results ---
 if 'result' in st.session_state:
@@ -100,7 +105,6 @@ if 'result' in st.session_state:
     col1.metric("Predicted Identity", res['prediction'].title())
     col2.metric("Confidence Level", f"{conf_pct:.1f}%")
     
-    # STABLE CHART: Fixed Y-Axis from 0 to 1 prevent "Zooming"
     chart_df = pd.DataFrame({
         'Category': [res['prediction'].title(), 'Others'],
         'Probability': [res['confidence'], 1.0 - res['confidence']]
@@ -108,12 +112,11 @@ if 'result' in st.session_state:
     
     chart = alt.Chart(chart_df).mark_bar(color='#58a6ff').encode(
         x=alt.X('Category', sort=None),
-        y=alt.Y('Probability', scale=alt.Scale(domain=[0, 1])), # LOCKS THE SCALE
+        y=alt.Y('Probability', scale=alt.Scale(domain=[0, 1])),
         tooltip=['Category', 'Probability']
     ).properties(height=300)
     
     st.altair_chart(chart, use_container_width=True)
-    
     scroll_to("result_anchor")
     
 st.write("---")
