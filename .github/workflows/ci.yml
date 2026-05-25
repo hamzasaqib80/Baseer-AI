@@ -34,6 +34,6 @@ jobs:
       
     - name: Unit Tests (Pytest)
       run: |
-        # Ensure we can run tests without trying to GPU training
         export APP_ENV=test
+        export PYTHONPATH=$PYTHONPATH:.
         pytest tests/
