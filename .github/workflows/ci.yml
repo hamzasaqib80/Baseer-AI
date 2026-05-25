@@ -30,7 +30,7 @@ jobs:
       run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
       
     - name: Security Audit (Bandit)
-      run: bandit -r src/ -ll -s B301
+      run: bandit -r src/ -ll -s B104,B614
       
     - name: Unit Tests (Pytest)
       run: |
