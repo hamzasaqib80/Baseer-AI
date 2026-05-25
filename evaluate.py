@@ -45,7 +45,7 @@ class Evaluator:
         if os.path.exists(self.config.infrastructure.model_save_path):
             checkpoint = torch.load(
                 self.config.infrastructure.model_save_path, map_location=self.device
-            )  # nosec B614
+            )  # nosec B301
             self.model.load_state_dict(checkpoint["model"])
             print(f"LOADED: Best model with Accuracy: {checkpoint['acc']:.2f}%")
         else:

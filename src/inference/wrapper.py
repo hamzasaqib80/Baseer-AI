@@ -49,7 +49,7 @@ class InferenceEngine:
         try:
             checkpoint = torch.load(
                 path, map_location=loc, weights_only=False
-            )  # nosec B614
+            )  # nosec B301
             self.model.load_state_dict(checkpoint["model"])
             print(f"[INFO] Weight initialization complete. Path: {path}")
         except FileNotFoundError:
