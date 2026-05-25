@@ -23,8 +23,8 @@ async def lifespan(app: FastAPI):
     print("[INFO] Shutting down service.")
 
 app = FastAPI(
-    title="VantageCV API",
-    description="Asynchronous inference service for CIFAR-10 classification.",
+    title="Baseer AI Backend",
+    description="High-fidelity inference service for automated object recognition.",
     version="1.0",
     contact={
         "name": "Muhammad Hamza Saqib",

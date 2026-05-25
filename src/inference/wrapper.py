@@ -32,7 +32,8 @@ class InferenceEngine:
              loc = 'cuda'
 
         try:
-            checkpoint = torch.load(path, map_location=loc)
+            # Fixed for PyTorch 2.6+ security settings
+            checkpoint = torch.load(path, map_location=loc, weights_only=False)
             self.model.load_state_dict(checkpoint['model'])
             print(f"[INFO] Weight initialization complete. Path: {path}")
         except FileNotFoundError:
